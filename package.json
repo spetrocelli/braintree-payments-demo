@@ -1,0 +1,21 @@
+{
+  "name": "braintree-demo",
+  "version": "1.0.0",
+  "description": "Demo Braintree best practices: Hosted Fields + 3DS, PayPal, Google Pay, Apple Pay (vault, guest, returning customer)",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "keywords": ["braintree", "payments", "hosted-fields", "3ds", "paypal", "google-pay", "apple-pay"],
+  "license": "MIT",
+  "dependencies": {
+    "braintree": "^3.37.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}

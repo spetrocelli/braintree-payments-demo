@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Card + 3DS · Braintree Demo</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>💳 Braintree Demo</h1>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="card.html">Card + 3DS</a>
+      <a href="paypal.html">PayPal</a>
+      <a href="wallets.html">Google / Apple Pay</a>
+    </nav>
+    <span class="env" id="env-badge">…</span>
+  </header>
+
+  <div class="container">
+    <div class="card">
+      <h2>Card with Hosted Fields + 3D Secure 2</h2>
+      <p class="lead">Hosted card fields (iframe, PCI SAQ A), 3DS2 authentication and anti-fraud device data.</p>
+
+      <div class="scenario-pills" id="pills">
+        <div class="pill active" data-scn="guest">Guest (no saving)</div>
+        <div class="pill" data-scn="vault">Checkout + save to Vault</div>
+        <div class="pill" data-scn="returning">Checkout with vault - buyer present</div>
+        <div class="pill" data-scn="mit">Checkout with vault - buyer not present</div>
+      </div>
+
+      <p class="note" id="scn-desc"></p>
+
+      <!-- Order ID set by the merchant: unique for each transaction.
+           Regenerated on every cycle to avoid the "Gateway Rejected: duplicate". -->
+      <div class="order-id-row">
+        <span class="label">🧾 Order ID (merchant):</span>
+        <code id="order-id">—</code>
+        <button id="regen-order" type="button">↻ Regenerate</button>
+      </div>
+
+      <!-- Email: needed for vault and returning -->
+      <div id="email-block">
+        <label for="email">Customer email</label>
+        <input type="email" id="email" placeholder="mario.rossi@example.com" />
+      </div>
+
+      <!-- ===== New card form (guest / vault) ===== -->
+      <div id="new-card-block">
+        <label>Card number</label>
+        <div class="hosted-field" id="cc-number"></div>
+        <div class="field-row">
+          <div>
+            <label>Expiry</label>
+            <div class="hosted-field" id="cc-exp"></div>
+          </div>
+          <div>
+            <label>CVV</label>
+            <div class="hosted-field" id="cc-cvv"></div>
+          </div>
+        </div>
+        <button class="btn" id="pay-card-btn" disabled>Initializing…</button>
+      </div>
+
+      <!-- ===== Saved methods (buyer present / buyer not present) ===== -->
+      <div id="returning-block" class="hidden">
+        <button class="btn secondary" id="load-vault-btn">Load saved methods</button>
+        <ul class="vaulted-list" id="vaulted-list"></ul>
+
+        <!-- MIT only: type of merchant-initiated transaction -->
+        <div id="mit-options" class="hidden">
+          <label for="txn-source">Charge type (Merchant Initiated)</label>
+          <select id="txn-source" style="width:100%;padding:0.6rem 0.7rem;border:1px solid var(--border);border-radius:8px;font-size:0.95rem">
+            <option value="recurring">recurring — recurring subscription</option>
+            <option value="installment">installment — installment</option>
+            <option value="unscheduled">unscheduled — occasional charge (e.g. utility bill)</option>
+          </select>
+        </div>
+
+        <button class="btn hidden" id="pay-vaulted-btn">Pay with selected method</button>
+      </div>
+
+      <div class="result" id="result"></div>
+    </div>
+
+    <div class="card log-card">
+      <div class="log-head">
+        <h3>📋 Payment flow (live log)</h3>
+        <button id="clear-log">Clear</button>
+      </div>
+      <div class="log-panel" id="flow-log"></div>
+    </div>
+  </div>
+
+  <!-- Braintree Web SDK v3 -->
+  <script src="https://js.braintreegateway.com/web/3.111.0/js/client.min.js"></script>
+  <script src="https://js.braintreegateway.com/web/3.111.0/js/hosted-fields.min.js"></script>
+  <script src="https://js.braintreegateway.com/web/3.111.0/js/three-d-secure.min.js"></script>
+  <script src="https://js.braintreegateway.com/web/3.111.0/js/data-collector.min.js"></script>
+  <script src="https://js.braintreegateway.com/web/3.111.0/js/vault-manager.min.js"></script>
+  <script type="module" src="/js/card.js"></script>
+</body>
+</html>

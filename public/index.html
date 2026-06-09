@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Braintree Demo · Best Practices</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>💳 Braintree Demo</h1>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="card.html">Card + 3DS</a>
+      <a href="paypal.html">PayPal</a>
+      <a href="wallets.html">Google / Apple Pay</a>
+    </nav>
+    <span class="env" id="env-badge">…</span>
+  </header>
+
+  <div class="container">
+    <div class="card">
+      <h2>Braintree integration demo — best practices</h2>
+      <p class="lead">
+        Three families of payment methods, each with the <strong>guest</strong>,
+        <strong>checkout with vault</strong> and <strong>returning customer</strong> flows.
+        Node.js/Express backend, <code>braintree-web v3</code> client SDK.
+      </p>
+      <div class="note">
+        <strong id="env-text">sandbox</strong> environment · demo amount
+        <strong id="amount-text">…</strong> <span id="currency-text"></span>.
+        Use the test cards listed in the README. No real charges.
+      </div>
+    </div>
+
+    <div class="grid home-grid" style="margin-top:1.25rem">
+      <a class="tile" href="card.html">
+        <div class="card">
+          <h2>1 · Card (Hosted Fields) + 3DS</h2>
+          <p class="lead">PCI-compliant card data collection (SAQ A) with hosted fields,
+          3D Secure 2 authentication and anti-fraud device data.</p>
+          <p>
+            <span class="badge green">Guest</span>
+            <span class="badge green">Vault</span>
+            <span class="badge green">Returning</span>
+          </p>
+        </div>
+      </a>
+
+      <a class="tile" href="paypal.html">
+        <div class="card">
+          <h2>2 · PayPal</h2>
+          <p class="lead">One-time PayPal checkout, saving to the Vault (billing agreement)
+          and reusing the saved method for the returning customer.</p>
+          <p>
+            <span class="badge green">Checkout</span>
+            <span class="badge green">Vault</span>
+            <span class="badge green">Returning</span>
+          </p>
+        </div>
+      </a>
+
+      <a class="tile" href="wallets.html">
+        <div class="card">
+          <h2>3 · Google Pay &amp; Apple Pay</h2>
+          <p class="lead">Wallet pass-through with Braintree tokenization.
+          Apple Pay requires HTTPS + a verified domain (see notes in the README).</p>
+          <p>
+            <span class="badge green">Google Pay</span>
+            <span class="badge amber">Apple Pay*</span>
+          </p>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <script type="module">
+    import { getConfig, highlightNav } from '/js/common.js';
+    highlightNav();
+    getConfig().then((c) => {
+      document.getElementById('env-badge').textContent = c.environment;
+      document.getElementById('env-text').textContent = c.environment;
+      document.getElementById('amount-text').textContent = c.amount;
+      document.getElementById('currency-text').textContent = c.currency;
+    });
+  </script>
+</body>
+</html>

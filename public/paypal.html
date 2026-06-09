@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PayPal · Braintree Demo</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>💳 Braintree Demo</h1>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="card.html">Card + 3DS</a>
+      <a href="paypal.html">PayPal</a>
+      <a href="wallets.html">Google / Apple Pay</a>
+    </nav>
+    <span class="env" id="env-badge">…</span>
+  </header>
+
+  <div class="container">
+    <div class="card">
+      <h2>PayPal</h2>
+      <p class="lead">One-time checkout, saving to the Vault (billing agreement) and reuse for the returning customer.</p>
+
+      <div class="scenario-pills" id="pills">
+        <div class="pill active" data-scn="checkout">Checkout (without Vault)</div>
+        <div class="pill" data-scn="vault">Checkout + Vault</div>
+        <div class="pill" data-scn="returning">Checkout with vault - buyer present</div>
+        <div class="pill" data-scn="mit">Checkout with vault - buyer not present</div>
+      </div>
+
+      <p class="note" id="scn-desc"></p>
+
+      <div id="email-block">
+        <label for="email">Customer email</label>
+        <input type="email" id="email" placeholder="mario.rossi@example.com" />
+      </div>
+
+      <!-- PayPal buttons (checkout / vault / returning buyer present) -->
+      <div id="button-block">
+        <!-- Returning: the email is needed to show the saved PayPal with the "Change payment method" link -->
+        <button class="btn secondary hidden" id="show-returning-btn">Show customer's saved PayPal</button>
+        <!-- Pay Later promotional messaging (e.g. "Pay in 3 installments") -->
+        <div id="paypal-messaging-container"></div>
+        <div id="paypal-button-container"></div>
+        <!-- Second button: Pay Later -->
+        <div id="paylater-button-container"></div>
+      </div>
+
+      <!-- Buyer NOT present (MIT): server-side charge on saved PayPal -->
+      <div id="returning-block" class="hidden">
+        <button class="btn secondary" id="load-vault-btn">Load saved PayPal (server-side)</button>
+        <ul class="vaulted-list" id="vaulted-list"></ul>
+        <div id="mit-options" class="hidden">
+          <label for="txn-source">Charge type (Merchant Initiated)</label>
+          <select id="txn-source" style="width:100%;padding:0.6rem 0.7rem;border:1px solid var(--border);border-radius:8px;font-size:0.95rem">
+            <option value="recurring">recurring — recurring premium/subscription</option>
+            <option value="installment">installment — installment</option>
+            <option value="unscheduled">unscheduled — occasional charge (e.g. insurance policy)</option>
+          </select>
+        </div>
+        <button class="btn hidden" id="pay-vaulted-btn">Run server-side charge</button>
+      </div>
+
+      <div class="result" id="result"></div>
+    </div>
+
+    <div class="card log-card">
+      <div class="log-head">
+        <h3>📋 Payment flow (live log)</h3>
+        <button id="clear-log">Clear</button>
+      </div>
+      <div class="log-panel" id="flow-log"></div>
+    </div>
+  </div>
+
+  <script src="https://js.braintreegateway.com/web/3.111.0/js/client.min.js"></script>
+  <script src="https://js.braintreegateway.com/web/3.111.0/js/paypal-checkout.min.js"></script>
+  <script src="https://js.braintreegateway.com/web/3.111.0/js/data-collector.min.js"></script>
+  <script src="https://js.braintreegateway.com/web/3.111.0/js/vault-manager.min.js"></script>
+  <script type="module" src="/js/paypal.js"></script>
+</body>
+</html>

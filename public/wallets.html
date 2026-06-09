@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Google / Apple Pay · Braintree Demo</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>💳 Braintree Demo</h1>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="card.html">Card + 3DS</a>
+      <a href="paypal.html">PayPal</a>
+      <a href="wallets.html">Google / Apple Pay</a>
+    </nav>
+    <span class="env" id="env-badge">…</span>
+  </header>
+
+  <div class="container">
+    <div class="grid">
+      <div class="card">
+        <h2>Google Pay</h2>
+        <p class="lead">Wallet tokenized via Braintree. In sandbox it uses Google Pay's <code>TEST</code> environment.</p>
+        <div class="note">
+          In the TEST environment Google Pay returns test instruments and does not require a Merchant ID.
+          It works on Chrome. For production you need the Google Merchant ID in <code>.env</code>.
+        </div>
+        <div id="googlepay-button-container"></div>
+        <div class="result" id="gp-result"></div>
+      </div>
+
+      <div class="card">
+        <h2>Apple Pay</h2>
+        <p class="lead">Wallet tokenized via Braintree. Available only on Safari / Apple devices.</p>
+        <div class="note" id="ap-note">
+          Apple Pay requires: <strong>HTTPS</strong>, a <strong>verified</strong> domain in the Braintree Control Panel,
+          Safari and an Apple device with a card in the Wallet. It is not available on <code>localhost</code> over HTTP.
+        </div>
+        <div id="applepay-button-container"></div>
+        <div class="result" id="ap-result"></div>
+      </div>
+    </div>
+
+    <div class="card log-card">
+      <div class="log-head">
+        <h3>📋 Payment flow (live log)</h3>
+        <button id="clear-log">Clear</button>
+      </div>
+      <div class="log-panel" id="flow-log"></div>
+    </div>
+  </div>
+
+  <script src="https://js.braintreegateway.com/web/3.111.0/js/client.min.js"></script>
+  <script src="https://js.braintreegateway.com/web/3.111.0/js/google-payment.min.js"></script>
+  <script src="https://js.braintreegateway.com/web/3.111.0/js/apple-pay.min.js"></script>
+  <script src="https://js.braintreegateway.com/web/3.111.0/js/data-collector.min.js"></script>
+  <script src="https://pay.google.com/gp/p/js/pay.js"></script>
+  <script type="module" src="/js/wallets.js"></script>
+</body>
+</html>
