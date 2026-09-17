@@ -42,7 +42,15 @@
 
       <!-- Email: needed for vault and returning -->
       <div id="email-block">
-        <label for="email">Customer email</label>
+        <div id="lookup-toggle" class="hidden" style="margin-bottom:.5rem;display:flex;gap:1rem;font-size:.9rem">
+          <label style="display:flex;align-items:center;gap:.3rem;font-weight:normal">
+            <input type="radio" name="lookup-type" value="email" checked> Email
+          </label>
+          <label style="display:flex;align-items:center;gap:.3rem;font-weight:normal">
+            <input type="radio" name="lookup-type" value="customerId"> Customer ID
+          </label>
+        </div>
+        <label for="email" id="email-label">Customer email</label>
         <input type="email" id="email" placeholder="mario.rossi@example.com" />
       </div>
 

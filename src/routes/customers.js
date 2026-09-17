@@ -31,6 +31,30 @@ router.get('/customers/:email/payment-methods', async (req, res) => {
   }
 });
 
+// GET /api/customers/by-id/:customerId/payment-methods
+// Same as above, but looks the customer up directly by Braintree customerId
+// instead of resolving it from the local email -> customerId store.
+router.get('/customers/by-id/:customerId/payment-methods', async (req, res) => {
+  const { customerId } = req.params;
+  try {
+    let customer;
+    try {
+      customer = await gateway.customer.find(customerId);
+    } catch {
+      return res.status(404).json({ error: 'Customer not found' });
+    }
+
+    log.bt('Reading methods saved in the Vault (by customerId)', { customerId });
+    const methods = (customer.paymentMethods || []).map(serializePaymentMethod);
+    log.ok(`Methods found: ${methods.length}`);
+
+    res.json({ customerId, email: customer.email || null, paymentMethods: methods });
+  } catch (err) {
+    log.err('Error reading payment methods', { message: err.message });
+    res.status(500).json({ error: 'Error reading payment methods', detail: err.message });
+  }
+});
+
 function serializePaymentMethod(pm) {
   const base = { token: pm.token, default: pm.default, type: pm.constructor?.name || 'Unknown' };
   if (pm.cardType) {

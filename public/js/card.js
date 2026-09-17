@@ -9,6 +9,7 @@ const orderId = createOrderId('order-id', 'regen-order');
 
 const state = {
   scenario: 'guest', // guest | vault | returning | mit
+  lookupType: 'email', // email | customerId (returning / mit only)
   config: null,
   clientInstance: null,
   hostedFields: null,
@@ -26,6 +27,8 @@ const els = {
   scnDesc: document.getElementById('scn-desc'),
   emailBlock: document.getElementById('email-block'),
   email: document.getElementById('email'),
+  emailLabel: document.getElementById('email-label'),
+  lookupToggle: document.getElementById('lookup-toggle'),
   newCardBlock: document.getElementById('new-card-block'),
   returningBlock: document.getElementById('returning-block'),
   mitOptions: document.getElementById('mit-options'),
@@ -74,7 +77,14 @@ function setScenario(scn) {
   els.newCardBlock.classList.toggle('hidden', usesVault);
   els.returningBlock.classList.toggle('hidden', !usesVault);
   els.mitOptions.classList.toggle('hidden', scn !== 'mit');
-  els.email.placeholder = scn === 'guest' ? 'mario.rossi@example.com (optional)' : 'mario.rossi@example.com';
+  els.lookupToggle.classList.toggle('hidden', !usesVault);
+
+  // outside returning/mit, always look up by email
+  if (!usesVault) {
+    state.lookupType = 'email';
+    els.lookupToggle.querySelectorAll('input[name="lookup-type"]').forEach((r) => (r.checked = r.value === 'email'));
+  }
+  updateIdentifierField();
 
   // contextual labels
   els.loadVaultBtn.textContent =
@@ -88,12 +98,43 @@ function setScenario(scn) {
   state.selectedMethod = null;
 }
 
+// Switches the shared input between "email" and "customerId" lookup mode.
+function updateIdentifierField() {
+  const isCustomerId = state.lookupType === 'customerId';
+  els.email.type = isCustomerId ? 'text' : 'email';
+  els.emailLabel.textContent = isCustomerId ? 'Customer ID' : 'Customer email';
+  els.email.placeholder = isCustomerId
+    ? 'e.g. 158712636'
+    : state.scenario === 'guest'
+      ? 'mario.rossi@example.com (optional)'
+      : 'mario.rossi@example.com';
+}
+
+els.lookupToggle.addEventListener('change', (e) => {
+  if (e.target.name !== 'lookup-type') return;
+  state.lookupType = e.target.value;
+  els.email.value = '';
+  updateIdentifierField();
+});
+
+// Reads the current identifier from the shared input, based on the active lookup mode.
+function getIdentifier() {
+  const value = els.email.value.trim();
+  if (!value) return null;
+  return state.lookupType === 'customerId' ? { customerId: value } : { email: value };
+}
+
+function identifierLabel(identifier) {
+  return identifier.customerId ? `customerId: ${identifier.customerId}` : identifier.email;
+}
+
 // Recreates the SDK client + Hosted Fields (needed to attach the customer in returning).
-async function rebuildClient(email) {
+// `identifier` is optional: { email } or { customerId }.
+async function rebuildClient(identifier) {
   setLoading(els.payCardBtn, true, 'Initializing…');
   try {
-    flow.http(`Requesting client token${email ? ` (customer: ${email})` : ' (anonymous)'}`);
-    const { clientToken, customerId } = await getClientToken(email);
+    flow.http(`Requesting client token${identifier ? ` (customer: ${identifierLabel(identifier)})` : ' (anonymous)'}`);
+    const { clientToken, customerId } = await getClientToken(identifier);
     flow.server(`Client token received`, { linkedCustomer: customerId || null });
 
     state.clientInstance = await braintree.client.create({ authorization: clientToken });
@@ -198,17 +239,19 @@ els.payCardBtn.addEventListener('click', async () => {
 
 // ---- Load saved methods (buyer present = SDK, buyer not present = server) ----
 els.loadVaultBtn.addEventListener('click', async () => {
-  const email = els.email.value.trim();
-  if (!email) return showResult(els.result, false, 'Enter the customer email');
+  const identifier = getIdentifier();
+  if (!identifier) {
+    return showResult(els.result, false, state.lookupType === 'customerId' ? 'Enter the customer ID' : 'Enter the customer email');
+  }
 
   setLoading(els.loadVaultBtn, true, 'Loading…');
   els.result.className = 'result';
   els.payVaultedBtn.classList.add('hidden');
   try {
     if (state.scenario === 'mit') {
-      await loadVaultServerSide(email);
+      await loadVaultServerSide(identifier);
     } else {
-      await loadVaultClientSide(email);
+      await loadVaultClientSide(identifier);
     }
   } catch (err) {
     flow.error('Vault loading error', { message: err.message });
@@ -219,9 +262,9 @@ els.loadVaultBtn.addEventListener('click', async () => {
 });
 
 // BUYER PRESENT: reads the methods via client SDK (vaultManager) → gets nonce + 3DS.
-async function loadVaultClientSide(email) {
-  flow.user(`Click "Load saved methods" for ${email}`);
-  await rebuildClient(email);
+async function loadVaultClientSide(identifier) {
+  flow.user(`Click "Load saved methods" for ${identifierLabel(identifier)}`);
+  await rebuildClient(identifier);
   flow.sdk('vaultManager.fetchPaymentMethods()');
   const methods = await state.vaultManager.fetchPaymentMethods({ defaultFirst: true });
   const cards = methods.filter((m) => m.type === 'CreditCard');
@@ -248,10 +291,13 @@ async function loadVaultClientSide(email) {
 }
 
 // BUYER NOT PRESENT: reads the methods ONLY server-side (token) → no client SDK.
-async function loadVaultServerSide(email) {
-  flow.user(`Click "Load saved cards (server-side)" for ${email}`);
-  flow.http(`GET /api/customers/${email}/payment-methods`);
-  const data = await api(`/api/customers/${encodeURIComponent(email)}/payment-methods`);
+async function loadVaultServerSide(identifier) {
+  flow.user(`Click "Load saved cards (server-side)" for ${identifierLabel(identifier)}`);
+  const path = identifier.customerId
+    ? `/api/customers/by-id/${encodeURIComponent(identifier.customerId)}/payment-methods`
+    : `/api/customers/${encodeURIComponent(identifier.email)}/payment-methods`;
+  flow.http(`GET ${path}`);
+  const data = await api(path);
   const cards = (data.paymentMethods || []).filter((m) => m.type === 'CreditCard');
   flow.server(`Methods in the Vault (server-side): ${data.paymentMethods?.length || 0} (cards: ${cards.length})`);
 
@@ -299,13 +345,13 @@ function renderVaultList(items, onSelect) {
 
 // ---- Pay with saved method ----
 els.payVaultedBtn.addEventListener('click', async () => {
-  const email = els.email.value.trim();
+  const identifier = getIdentifier();
   els.result.className = 'result';
   try {
     if (state.scenario === 'mit') {
-      await payMitServerSide(email);
+      await payMitServerSide(identifier);
     } else {
-      await payReturningCustomer(email);
+      await payReturningCustomer(identifier);
     }
   } catch (err) {
     flow.error('Payment failed', { message: err.message });
@@ -323,7 +369,7 @@ els.payVaultedBtn.addEventListener('click', async () => {
 });
 
 // BUYER PRESENT: 3DS on the saved method's nonce + checkout.
-async function payReturningCustomer(email) {
+async function payReturningCustomer(identifier) {
   if (!state.selectedNonce) return;
   setLoading(els.payVaultedBtn, true, '3D Secure…');
   flow.user('Click "Pay with selected method" (buyer present)');
@@ -334,19 +380,20 @@ async function payReturningCustomer(email) {
     amount: state.config.amount,
     nonce: state.selectedNonce,
     bin: m.details?.bin,
-    email: email || undefined,
+    email: identifier?.email || undefined,
     onLookupComplete: (data, next) => next(),
   });
   flow.sdk('3DS completed', { liabilityShifted: threeDSPayload.threeDSecureInfo?.liabilityShifted });
 
   setLoading(els.payVaultedBtn, true, 'Charge…');
-  flow.http('POST /api/checkout (returning customer)', { email, orderId: orderId.value });
+  flow.http('POST /api/checkout (returning customer)', { identifier, orderId: orderId.value });
   const data = await api('/api/checkout', {
     method: 'POST',
     body: JSON.stringify({
       paymentMethodNonce: threeDSPayload.nonce,
       deviceData: state.dataCollector.deviceData,
-      email,
+      email: identifier?.email,
+      customerId: identifier?.customerId,
       requireThreeDSecure: true,
       orderId: orderId.value,
     }),
@@ -356,17 +403,18 @@ async function payReturningCustomer(email) {
 }
 
 // BUYER NOT PRESENT: server-side MIT charge on the token, without 3DS or client SDK.
-async function payMitServerSide(email) {
+async function payMitServerSide(identifier) {
   if (!state.selectedToken) return;
   const transactionSource = els.txnSource.value;
   setLoading(els.payVaultedBtn, true, 'Server-side charge…');
   flow.user(`Click "Run server-side charge" (buyer not present, ${transactionSource})`);
-  flow.http('POST /api/charge-vaulted (MIT)', { email, paymentMethodToken: state.selectedToken, transactionSource, orderId: orderId.value });
+  flow.http('POST /api/charge-vaulted (MIT)', { identifier, paymentMethodToken: state.selectedToken, transactionSource, orderId: orderId.value });
 
   const data = await api('/api/charge-vaulted', {
     method: 'POST',
     body: JSON.stringify({
-      email,
+      email: identifier?.email,
+      customerId: identifier?.customerId,
       paymentMethodToken: state.selectedToken,
       transactionSource,
       orderId: orderId.value,

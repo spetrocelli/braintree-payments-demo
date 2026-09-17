@@ -6,16 +6,25 @@ import { log } from '../logger.js';
 const router = Router();
 
 // GET /api/client-token
-// GET /api/client-token?email=mario@example.com   -> token "tied" to the customer
+// GET /api/client-token?email=mario@example.com       -> token "tied" to the customer (resolved via email)
+// GET /api/client-token?customerId=158712636           -> token "tied" directly to a Braintree customerId
 //
 // Generating the client token with the customerId lets the client SDK (vaultManager)
 // read the payment methods saved in the Vault -> "returning customer" scenario.
 router.get('/client-token', async (req, res) => {
   try {
     const options = {};
-    const email = req.query.email;
+    const { email, customerId } = req.query;
 
-    if (email) {
+    if (customerId) {
+      try {
+        await gateway.customer.find(customerId);
+        options.customerId = customerId;
+        log.bt('Client token TIED to customer (by customerId)', { customerId });
+      } catch {
+        return res.status(404).json({ error: 'Customer not found for the given customerId' });
+      }
+    } else if (email) {
       const existing = findByEmail(email);
       if (existing) {
         options.customerId = existing.customerId;

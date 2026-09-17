@@ -17,9 +17,13 @@ export function getConfig() {
   return api('/api/config');
 }
 
-// Requests a client token (optionally linked to an existing customer).
-export async function getClientToken(email) {
-  const qs = email ? `?email=${encodeURIComponent(email)}` : '';
+// Requests a client token (optionally linked to an existing customer,
+// either by email or directly by Braintree customerId).
+export async function getClientToken({ email, customerId } = {}) {
+  const params = new URLSearchParams();
+  if (customerId) params.set('customerId', customerId);
+  else if (email) params.set('email', email);
+  const qs = params.toString() ? `?${params.toString()}` : '';
   const data = await api(`/api/client-token${qs}`);
   return data; // { clientToken, customerId }
 }

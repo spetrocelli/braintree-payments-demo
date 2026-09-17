@@ -27,6 +27,7 @@ router.post('/checkout', async (req, res) => {
     deviceData,
     vault = false,
     email,
+    customerId: providedCustomerId,
     firstName,
     lastName,
     requireThreeDSecure = false,
@@ -52,8 +53,8 @@ router.post('/checkout', async (req, res) => {
 
   try {
     // 1) Resolve/create the customer if we need to tie it to the Vault or if it's a returning one.
-    let customerId = null;
-    if (email) {
+    let customerId = providedCustomerId || null;
+    if (!customerId && email) {
       const existing = findByEmail(email);
       if (existing) {
         customerId = existing.customerId;
@@ -196,7 +197,8 @@ async function dedupeCustomerCards(customerId) {
  * "Stored Credentials" framework.
  *
  * Body:
- *   email             (string)  customer in the Vault                     [required]
+ *   email             (string)  customer in the Vault (or customerId below)  [required, one of]
+ *   customerId        (string)  Braintree customer id, alternative to email  [required, one of]
  *   paymentMethodToken(string)  token of the saved method                 [required]
  *   amount            (string)  amount; defaults from .env
  *   transactionSource (string)  recurring | unscheduled | installment ...  (default: recurring)
@@ -204,10 +206,10 @@ async function dedupeCustomerCards(customerId) {
 const VALID_SOURCES = ['recurring', 'recurring_first', 'unscheduled', 'installment', 'installment_first', 'moto'];
 
 router.post('/charge-vaulted', async (req, res) => {
-  const { email, paymentMethodToken, amount, transactionSource = 'recurring', orderId } = req.body;
+  const { email, customerId, paymentMethodToken, amount, transactionSource = 'recurring', orderId } = req.body;
 
   if (!paymentMethodToken) return res.status(400).json({ error: 'paymentMethodToken missing' });
-  if (!email) return res.status(400).json({ error: 'customer email missing' });
+  if (!email && !customerId) return res.status(400).json({ error: 'customer email or customerId missing' });
   if (!VALID_SOURCES.includes(transactionSource)) {
     return res.status(400).json({ error: `invalid transactionSource (allowed: ${VALID_SOURCES.join(', ')})` });
   }
@@ -215,7 +217,8 @@ router.post('/charge-vaulted', async (req, res) => {
   const merchantOrderId = orderId || genOrderId();
 
   log.http('Charge-vaulted (MIT / buyer not present)', {
-    email,
+    email: email || undefined,
+    customerId: customerId || undefined,
     paymentMethodToken,
     transactionSource,
     orderId: merchantOrderId,
@@ -223,8 +226,12 @@ router.post('/charge-vaulted', async (req, res) => {
   });
 
   try {
-    const customer = findByEmail(email);
-    if (!customer) return res.status(404).json({ error: 'Customer not found in the Vault' });
+    if (customerId) {
+      log.bt('MIT charge identified by customerId', { customerId });
+    } else {
+      const customer = findByEmail(email);
+      if (!customer) return res.status(404).json({ error: 'Customer not found in the Vault' });
+    }
 
     // No nonce, no 3DS: direct charge on the saved token.
     log.bt('transaction.sale (MIT) →', {
